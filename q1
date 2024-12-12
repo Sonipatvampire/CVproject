@@ -1,0 +1,62 @@
+import cv2
+import numpy as np
+
+# This code is used to detect the counters in the video and save the images and video in the output directory
+
+# Load the template image (the counter you want to detect)
+template = cv2.imread('/Users/kunalsingh/Downloads/SampleVideos/detected_counters_images/detected_counter_2.png')
+gray_template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+
+# Initialize ORB detector
+orb = cv2.ORB_create()
+
+# Find keypoints and descriptors for the template
+keypoints_template, descriptors_template = orb.detectAndCompute(gray_template, None)
+
+# Create a BFMatcher object
+bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+
+# Open the video file
+video_path = '/Users/kunalsingh/Downloads/SampleVideos/dataset/Thc f1.mp4'
+cap = cv2.VideoCapture(video_path)
+
+# Get the frames per second (FPS) of the video
+fps = cap.get(cv2.CAP_PROP_FPS)
+frame_interval = int(fps)  # Calculate the interval for 1 FPS
+
+frame_count = 0
+
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Process only every nth frame (where n is the frame interval)
+    if frame_count % frame_interval == 0:
+        # Convert the frame to grayscale
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Find keypoints and descriptors in the current frame
+        keypoints_frame, descriptors_frame = orb.detectAndCompute(gray_frame, None)
+
+        # Match descriptors
+        matches = bf.match(descriptors_template, descriptors_frame)
+
+        # Sort matches by distance
+        matches = sorted(matches, key=lambda x: x.distance)
+
+        # Draw matches
+        matched_frame = cv2.drawMatches(template, keypoints_template, frame, keypoints_frame, matches[:10], None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
+        # Display the matched frame
+        cv2.imshow('Matches', matched_frame)
+
+        # Exit on 'ESC' key
+        if cv2.waitKey(30) & 0xFF == 27:
+            break
+
+    frame_count += 1
+
+# Release the video capture object and close windows
+cap.release()
+cv2.destroyAllWindows()
